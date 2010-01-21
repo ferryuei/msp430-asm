@@ -1,0 +1,157 @@
+//**********************************************************************************************
+//* Filename:     SupportFunctions.s43                                                         *
+//* Description:                                                                               *
+//* Device:       MSP430F2012IN                                                                *
+//* Version:      0.0.1                                                                        *
+//* Compiler:     IAR Embedded Workbench IDE V.4.11A (5.12)                                    *
+//* Date:         01/2009                                                                      *
+//* Author:       (c) Gerald Gradl                                                             *
+//**********************************************************************************************
+
+      PUBLIC  Init_Sys
+      PUBLIC  REGClear
+      PUBLIC  RAMClear
+      PUBLIC  WaitS
+      PUBLIC  WaitM
+      PUBLIC  WaitM2
+      PUBLIC  WaitL
+      PUBLIC  WaitPulse
+      PUBLIC  WaitSPI
+      PUBLIC  WaitDebounce
+      
+//**********************************************************************************************
+//* Include Files                                                                              *
+//**********************************************************************************************
+#include "msp430x20x2.h"
+#include "Definitions.h"
+
+//**********************************************************************************************
+//* Support Functions                                                                          *
+//**********************************************************************************************
+            RSEG CODE:CODE
+
+;-----------------------------------------------------------------------------------------------
+Init_Sys                                             ; Initialize System Peripherals
+;-----------------------------------------------------------------------------------------------
+StopWDT     mov   #WDTPW+WDTHOLD,&WDTCTL             ; Stop WDT
+SetupBT                                              ; Set DCO to 1 MHz:
+            mov.b &CALBC1_8MHZ,&BCSCTL1              ; Set range
+            mov.b &CALDCO_8MHZ,&DCOCTL               ; Set DCO step + modulation
+           // bis.b #DIVM_3,&BCSCTL2
+
+SetupPorts  bic.b #GSCLK+SCLK+XLAT,&P1OUT
+            bis.b #VPRG+BLANK,&P1OUT
+            bis.b #GSCLK+XLAT+VPRG+BLANK,&P1DIR
+
+            bic.b #LED,&P2SEL
+            bis.b #LED,&P2OUT
+            bis.b #LED,&P2DIR
+            
+            bis.b #KEYS,&P1IES
+            bis.b #KEYS,&P1IE
+            bic.b #KEYS,&P1DIR
+            
+            bis.b #SCLK+SIN,&P1DIR
+            bic.b #SCLK+SIN,&P1OUT
+/*            
+SetupTimerA mov.w #TASSEL_2+TACLR,&TACTL
+            mov.w #OUTMOD_4,&TACCTL0
+          // mov.w #CCIE,&TACCTL1
+            mov.w #01h,&TACCR0
+          // mov.w #0FFFFh,&TACCR1
+            
+            bis.b #GSCLK,&P1SEL
+            
+
+SetupUSI    bis.b #USIPE7+USIPE6+USIPE5+USIMST+USIOE,&USICTL0
+            bis.b #USIDIV_3+USISSEL_2,&USICKCTL
+            bic.b #USISWRST,&USICTL0
+          //  mov.b #08h,&USICNT
+          
+WDTTimer    mov   #WDTPW+WDTHOLD+WDTTMSEL+WDTCNTCL+WDTIS_3,&WDTCTL
+            bis.b #WDTIE,&IE1
+          
+            eint
+*/          
+            ret
+
+;-----------------------------------------------------------------------------------------------
+REGClear                                             ; Clear All Registers
+;-----------------------------------------------------------------------------------------------
+            clr   R4
+            clr   R5
+            clr   R6
+            clr   R7
+            clr   R8
+            clr   R9
+            clr   R10
+            clr   R11
+            clr   R12
+            clr   R13
+            clr   R14
+            clr   R15
+            ret
+
+;-----------------------------------------------------------------------------------------------
+RAMClear                                             ; RAM clear routine
+;-----------------------------------------------------------------------------------------------
+            mov   #BOR,RTEMP1                        ; Start address of RAM
+            mov   SP,RTEMP2                          ; Use stack pointer position
+            decd  RTEMP2                             ; Safety distance to SP
+RAMClearLP  mov.b #0h,0(RTEMP1)                      ; Start clearing
+            inc   RTEMP1                             ; Increment counter
+            cmp   RTEMP2,RTEMP1                      ; End of RAM?
+            jne   RAMClearLP                         ; No? Keep going
+            clr   RTEMP1                             ; Clear temporary registers
+            clr   RTEMP2
+            ret
+;-----------------------------------------------------------------------------------------------
+WaitPulse                                            ; Wait routine for Pulses
+;-----------------------------------------------------------------------------------------------
+            mov   #02h,RTEMP1
+LoopPulse   dec   RTEMP1
+            jnz   LoopPulse
+            ret
+;-----------------------------------------------------------------------------------------------
+WaitS                                                ; Short wait routine
+;-----------------------------------------------------------------------------------------------
+            mov   #0FFh,RTEMP1
+LoopS       dec   RTEMP1
+            jnz   LoopS
+            ret
+;-----------------------------------------------------------------------------------------------
+WaitM                                                ; Long wait routine
+;-----------------------------------------------------------------------------------------------
+            mov   #01FFh,RTEMP1
+LoopM       dec   RTEMP1
+            jnz   LoopM
+            ret
+;-----------------------------------------------------------------------------------------------
+WaitM2                                               ; Long wait routine
+;-----------------------------------------------------------------------------------------------
+            mov   #03FFFh,RTEMP1
+LoopM2      dec   RTEMP1
+            jnz   LoopM2
+            ret            
+;-----------------------------------------------------------------------------------------------
+WaitL                                                ; Long wait routine
+;-----------------------------------------------------------------------------------------------
+            mov   #0FFFFh,RTEMP1
+LoopL       dec   RTEMP1
+            jnz   LoopL
+            ret
+;-----------------------------------------------------------------------------------------------
+WaitSPI                                              ; SPI wait routine
+;-----------------------------------------------------------------------------------------------
+            mov.b #02h,RTEMP1
+LoopSPI     dec   RTEMP1
+            jnz   LoopSPI
+            ret
+;-----------------------------------------------------------------------------------------------
+WaitDebounce                                         ; Wait routine for button debounce
+;-----------------------------------------------------------------------------------------------
+            mov   #0300h,RTEMP2
+LoopDB      dec   RTEMP2
+            jnz   LoopDB
+            ret
+END

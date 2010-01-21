@@ -1,0 +1,450 @@
+//**********************************************************************************************
+//* Filename:     Stars.s43                                                                    *
+//* Description:  Sternenhimmel für Laura                                                      *
+//* Device:       MSP430F2012IN                                                                *
+//* Version:      1.0.0                                                                        *
+//* Compiler:     IAR Embedded Workbench IDE V.4.21                                            *
+//* Date:         01/2010                                                                      *
+//* Author:       (c) Gerald Gradl                                                             *
+//**********************************************************************************************
+/*
+Sternformationen:
+
+1. 1 2 5 7 10 18 19 23 28 29 (Steinbock)
+2. 3 7 8 13 20 22 26 30 (Zwilling)
+3. 4 6 9 16 17 20 27 31 32 (Jungfrau)
+4. 11 12 14 15 25 (Krebs)
+5. 21 23 24 (Widder)
+
+  00000000011111111112222222222333
+  12345678901234567890123456789012
+1.11001010010000000110001000011000
+2.00100011000010000001010001000100
+3.00010100100000011001000000100011
+4.00000000001101100000000010000000
+5.00000000000000000000101100000000
+*/
+//**********************************************************************************************
+//* Include Files                                                                              *
+//**********************************************************************************************
+#include "Definitions.h"
+
+//**********************************************************************************************
+//* Global Variables                                                                           *
+//**********************************************************************************************
+      EXTERN  Init_Sys
+      EXTERN  REGClear
+      EXTERN  RAMClear
+      EXTERN  WaitS
+      EXTERN  WaitM
+      EXTERN  WaitM2
+      EXTERN  WaitL
+      EXTERN  WaitPulse
+      EXTERN  WaitSPI
+      EXTERN  WaitDebounce
+      
+            ORG   CODE_REV
+//**********************************************************************************************
+//* Version Info                                                                               *
+//**********************************************************************************************
+Version     DW    00100h
+
+//**********************************************************************************************
+//* RAM                                                                                        *
+//**********************************************************************************************
+RAM         ORG   BOR
+;-----------------------------------------------------------------------------------------------
+; Variables
+;-----------------------------------------------------------------------------------------------
+
+;TACOUNTER  DW    0
+
+DCVALUE       DB  0
+LENGTH        DB  0
+EVEN
+DCSTRING      DS  24
+EVEN
+GSSTRING      DS  48
+EVEN
+CURRENTSIGN   DW  0
+SIGNCONTENT   DW  0
+DIMMACT       DW  0
+DIMMTEMP      DW  0
+GSCLKCNT      DW  0
+STATUSBITS    DB  0       ; RESERVED-RESERVED-RESERVED-RESERVED-RESERVED-RESERVED-ONOFF-FIRSTCYCLE
+REPEATER      DB  0
+
+;-----------------------------------------------------------------------------------------------
+; Constants
+;-----------------------------------------------------------------------------------------------
+            RSEG  CODE:CODE
+
+////           33322222222221111111111000000000
+////           21098765432109876543210987654321
+//STEINBOCK DL 00011000010001100000001001010011b
+//ZWILLING  DL 00100010001010000001000011000100b
+//JUNGFRAU  DL 11000100000010011000000100101000b
+//KREBS     DL 00000001000000000110110000000000b
+//WIDDER    DL 00000000110100000000000000000000b
+
+//TESTL      DW 0000000000000001b
+//TESTH      DW 0000000000000000b
+//ALLONL     DW 1111111111111111b
+//ALLONH     DW 1111111111111111b
+ALLOFFL    DW 0000000000000000b
+ALLOFFH    DW 0000000000000000b
+
+STEINBOCKL DW 0000001001010011b
+STEINBOCKH DW 0001100001000110b
+ZWILLINGL  DW 0001000011000100b
+ZWILLINGH  DW 0010001000101000b
+JUNGFRAUL  DW 1000000100101000b
+JUNGFRAUH  DW 1100010000001001b
+KREBSL     DW 0110110000000000b
+KREBSH     DW 0000000100000000b
+WIDDERL    DW 0000000000000000b
+WIDDERH    DW 0000000011010000b
+ENDE
+
+
+//**********************************************************************************************
+//* Main Memory                                                                                *
+//**********************************************************************************************
+	    RSEG  CODE:CODE	                     ;ORG   BOF
+//main
+RESET                                      	     ; Set Program Start at begin of Flash
+            mov   #EOR,SP                            ; End of RAM  + 1
+            call  #Init_Sys
+            call  #REGClear
+            call  #RAMClear
+
+RESTART     mov.b   #DotCorrection,&DCVALUE          
+            call    #BUILDDCString
+            call    #SENDDotCorretion
+           // jmp     TESTLED
+            mov.b   #TOTALREPEAT,&REPEATER
+            bis.b   #ONOFF,&STATUSBITS
+            mov     #STEINBOCKL,ACTSTAR
+
+//**********************************************************************************************
+//* Main Loop                                                                                  *
+//**********************************************************************************************
+;-----------------------------------------------------------------------------------------------
+Main                                                 ; Main Program
+;-----------------------------------------------------------------------------------------------
+            call    #BACKGROUND
+            call    #DIMMIN
+            call    #SHOWSTAR
+            call    #DIMMOUT
+            call    #BACKGROUND
+            incd    ACTSTAR
+            incd    ACTSTAR
+            cmp     #ENDE,ACTSTAR
+            jne     Main
+            mov     #STEINBOCKL,ACTSTAR
+            dec.b   &REPEATER
+            jz      SWITCHOFF
+            jmp     Main
+
+SWITCHOFF   mov     #ALLOFFL,ACTSTAR 
+            mov     #DIMMLOW,&DIMMACT
+LoopOFFDIM  call    #BUILDGSString
+            call    #SENDGreyScale
+            sub     #DIMMSTEP,&DIMMACT
+            jnz     LoopOFFDIM
+            eint
+            bis.b   #LPM3,SR
+            jmp     $
+            
+/*
+TESTLED     mov     #TESTL,ACTSTAR
+            call    #BACKGROUND
+            call    #DIMMIN
+            call    #SHOWSTAR
+            call    #DIMMOUT
+            jmp     TESTLED
+*/            
+;-----------------------------------------------------------------------------------------------
+BUILDDCString
+            mov.b   #006d,&LENGTH
+            mov     #DCSTRING,RTEMP1
+            mov     #008d,RTEMP2
+            clrc
+            rlc.b   &DCVALUE
+            rlc.b   &DCVALUE
+
+DCLoop      cmp.b   #0h,&LENGTH
+            jne     DC$1
+            mov.b   #DotCorrection,&DCVALUE
+            clrc
+            rlc.b   &DCVALUE
+            rlc.b   &DCVALUE
+            mov.b   #006d,&LENGTH
+DC$1        cmp     #0h,RTEMP2
+            jne     DC$2
+            mov     #008d,RTEMP2
+            inc     RTEMP1
+            cmp     #DCSTRING+24,RTEMP1
+            jeq     LeaveDC
+            
+DC$2        clrc
+            rlc.b   &DCVALUE
+            jc      SetDC
+ClrDC       dec.b   &LENGTH
+            dec     RTEMP2
+            clrc
+            rlc.b   0(RTEMP1)
+            jmp     DCLoop
+SetDC       dec.b   &LENGTH
+            dec     RTEMP2
+            setc
+            rlc.b   0(RTEMP1)
+            jmp     DCLoop
+            
+LeaveDC     clr.b   &DCVALUE
+            ret
+;-----------------------------------------------------------------------------------------------
+
+
+;-----------------------------------------------------------------------------------------------
+BUILDGSString
+            mov.b   #012d,&LENGTH
+            mov     #GSSTRING,RTEMP1
+            mov     #08d,RTEMP2
+            mov     @ACTSTAR,&SIGNCONTENT
+GSSign      clrc
+            rlc     &SIGNCONTENT
+            jc      ActiveLED
+InactiveLED mov     #DIMMLOW,&DIMMTEMP
+            clrc
+            rlc     &DIMMTEMP
+            rlc     &DIMMTEMP
+            rlc     &DIMMTEMP
+            rlc     &DIMMTEMP
+            jmp     GSLoop
+ActiveLED   mov     &DIMMACT,&DIMMTEMP
+            clrc
+            rlc     &DIMMTEMP
+            rlc     &DIMMTEMP
+            rlc     &DIMMTEMP
+            rlc     &DIMMTEMP
+
+GSLoop      cmp.b   #0h,&LENGTH
+            jne     GS$1
+            mov.b   #012d,&LENGTH
+            jmp     GSSign
+            
+GS$1        cmp     #0h,RTEMP2
+            jne     GS$2
+            mov     #08d,RTEMP2
+            inc     RTEMP1
+            cmp     #GSSTRING+24,RTEMP1
+            jne     GS$3
+            incd    ACTSTAR            
+            mov     @ACTSTAR,&SIGNCONTENT
+            jmp     GSSign
+GS$3        cmp     #GSSTRING+48,RTEMP1
+            jeq     LeaveGS
+            
+GS$2        clrc
+            rlc     &DIMMTEMP
+            jc      SetGS
+ClrGS       dec.b   &LENGTH
+            dec     RTEMP2
+            clrc
+            rlc.b   0(RTEMP1)
+            jmp     GSLoop
+SetGS       dec.b   &LENGTH
+            dec     RTEMP2
+            setc
+            rlc.b   0(RTEMP1)
+            jmp     GSLoop
+            
+LeaveGS     decd    ACTSTAR
+            ret
+;-----------------------------------------------------------------------------------------------
+
+
+;-----------------------------------------------------------------------------------------------
+SENDDotCorretion:
+            bic.b   #XLAT,&P1OUT
+            bis.b   #VPRG+BLANK,&P1OUT
+            
+            mov     #DCSTRING,RTEMP2
+NextDC      mov     #08d,&LENGTH
+            mov.b   0(RTEMP2),R5
+            swpb    R5
+ShiftDCData
+            clrc
+            rlc     R5
+            jc      SetCDC
+      
+ClearCDC    bic.b   #SIN,&P1OUT
+            jmp     ClockDC
+            nop
+SetCDC      bis.b   #SIN,&P1OUT
+            jmp     ClockDC     
+            nop
+ClockDC     bis.b   #SCLK,&P1OUT
+            nop
+            nop
+            nop
+            nop
+            bic.b   #SCLK,&P1OUT
+            dec     &LENGTH
+            jnz     ShiftDCData
+            inc     RTEMP2
+            cmp     #DCSTRING+24,RTEMP2
+            jne     NextDC
+            bic.b   #SIN,&P1OUT
+            call    #XLATPulse
+            ret
+;-----------------------------------------------------------------------------------------------
+SENDGreyScale:
+            bit.b   #VPRG,&P1OUT
+            jnc     VPRGNotSet
+            bic.b   #VPRG,&P1OUT
+            bis.b   #FIRSTCYCLE,&STATUSBITS
+VPRGNotSet  clr     &GSCLKCNT
+            bic.b   #BLANK,&P1OUT            
+            
+            mov     #GSSTRING,RTEMP2
+NextGS      mov     #08d,&LENGTH
+            mov.b   0(RTEMP2),R5
+            swpb    R5
+ShiftGSData
+            clrc
+            rlc     R5
+            jc      SetCGS
+      
+ClearCGS    bic.b   #SIN,&P1OUT
+            jmp     ClockGS
+            nop
+SetCGS      bis.b   #SIN,&P1OUT
+            jmp     ClockGS     
+            nop
+ClockGS     bis.b   #SCLK+GSCLK,&P1OUT
+            nop
+            nop
+            nop
+            nop
+            bic.b   #SCLK+GSCLK,&P1OUT
+            inc     &GSCLKCNT
+            dec     &LENGTH
+            jnz     ShiftGSData
+            inc     RTEMP2
+            cmp     #GSSTRING+48,RTEMP2
+            jne     NextGS
+            bic.b   #SIN,&P1OUT
+            
+GSCLKLoop   bis.b   #GSCLK,&P1OUT
+            nop
+            nop
+            nop
+            nop
+            bic.b   #GSCLK,&P1OUT
+            inc     &GSCLKCNT
+            cmp     #4096d,&GSCLKCNT
+            jne     GSCLKLoop
+            
+LastGS      bis.b   #BLANK,&P1OUT
+            call    #XLATPulse
+            bit.b   #FIRSTCYCLE,&STATUSBITS
+            jnc     NotFirstCycle
+            call    #SCLKPulse
+NotFirstCycle
+            bic.b   #FIRSTCYCLE,&STATUSBITS
+            ret
+;-----------------------------------------------------------------------------------------------            
+DIMMIN      mov     #DIMMLOW,&DIMMACT
+LoopDIN     call    #BUILDGSString
+            call    #SENDGreyScale
+
+            add     #DIMMSTEP,&DIMMACT
+            cmp     #DIMMHIGH,&DIMMACT
+            jl      LoopDIN
+            ret
+;-----------------------------------------------------------------------------------------------
+DIMMOUT     mov     #DIMMHIGH,&DIMMACT
+LoopDOUT    call    #BUILDGSString
+            call    #SENDGreyScale
+
+            sub     #DIMMSTEP,&DIMMACT
+            cmp     #DIMMLOW,&DIMMACT
+            jge     LoopDOUT
+            ret
+;-----------------------------------------------------------------------------------------------
+SHOWSTAR    mov     #DIMMHIGH,&DIMMACT
+            call    #BUILDGSString
+            mov     #STARTIME,R4
+RepeatSTAR  call    #SENDGreyScale
+            dec     R4
+            jnz     RepeatSTAR
+
+            ret
+;-----------------------------------------------------------------------------------------------
+BACKGROUND  mov     #DIMMLOW,&DIMMACT
+            call    #BUILDGSString
+            mov     #BACKGROUNDTIME,R4
+RepeatBACK  call    #SENDGreyScale
+            dec     R4
+            jnz     RepeatBACK
+
+            ret
+;-----------------------------------------------------------------------------------------------
+XLATPulse:  call    #WaitPulse
+            bis.b   #XLAT,&P1OUT
+            call    #WaitPulse
+            bic.b   #XLAT,&P1OUT
+            ret
+;-----------------------------------------------------------------------------------------------
+SCLKPulse:  call    #WaitPulse
+            bis.b   #SCLK,&P1OUT
+            call    #WaitPulse
+            bic.b   #SCLK,&P1OUT
+            ret
+;-----------------------------------------------------------------------------------------------
+
+
+
+//**********************************************************************************************
+//* Interrupt Routines                                                                         *
+//**********************************************************************************************
+P1ISR       call    #WaitDebounce
+            bic.b   #KEYS,&P1IFG
+            bit.b   #ONOFF,&STATUSBITS
+            jc      OFFITGOES
+            
+ONITGOES    bic.b   #LPM3+GIE,0(SP)
+            mov     #RESTART,2(SP)
+            reti
+
+OFFITGOES   bic.b   #ONOFF,&STATUSBITS
+            bic.b   #LPM3+GIE,0(SP)
+            mov     #SWITCHOFF,2(SP)
+            reti
+            
+//**********************************************************************************************
+//* Interrupt Vectors used with MSP430x20xx                                                    *
+//**********************************************************************************************
+            RSEG  INTVEC                             ; Interrupt Vector Startadress
+            DW    RESET                              ; 16 - unused
+            DW    RESET                              ; 17 - unused
+            DW    P1ISR                              ; 18 - I/O Port P1
+            DW    RESET                              ; 19 - I/O Port P2
+            DW    RESET                              ; 20 - USI (F20x2 and F20x3 only)
+            DW    RESET                              ; 21 - ADC10 (F20x2 only) / SD16A (F20x3 only)
+            DW    RESET                              ; 22 - unused
+            DW    RESET                              ; 23 - unused
+            DW    RESET                              ; 24 - Timer A2 TACCR1, TAIFG
+            DW    RESET                              ; 25 - Timer A2 TACCR0
+            DW    RESET                              ; 26 - Watchdog Timer+, Timer mode
+            DW    RESET                              ; 27 - Comp. A+ (F20x1 only)
+            DW    RESET                              ; 28 - unused
+            DW    RESET                              ; 29 - unused
+            DW    RESET                              ; 30 - NMI, Osc. fault
+            DW    RESET                              ; 31 - POR, ext. Reset, Watchdog Timer+
+//**********************************************************************************************
+//* End of program                                                                             *
+//**********************************************************************************************
+END
