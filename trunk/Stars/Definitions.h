@@ -3,7 +3,7 @@
 * This file supports assembler and C development within the IAR-Embedded-Workbench environment.
 * Enclose all #define statements with parentheses
 *
-* Gerald Gradl, Version 0.1
+* Gerald Gradl, Version 1.0
 **********************************************************************************************/
 
 #define F2012
@@ -37,6 +37,7 @@ Global_Include_Files                            ; Include files
 //STATUSBITS
 #define     FIRSTCYCLE      01h
 #define     ONOFF           02h
+#define		INITIAL			04h
 
 //#define     WDTIS_3         03h
 /**********************************************************************************************

@@ -2,28 +2,12 @@
 //* Filename:     Stars.s43                                                                    *
 //* Description:  Sternenhimmel für Laura                                                      *
 //* Device:       MSP430F2012IN                                                                *
-//* Version:      1.0.0                                                                        *
-//* Compiler:     IAR Embedded Workbench IDE V.4.21                                            *
+//* Version:      1.0.1 - Fix for initial blink added, INIT Bit added to Statusregister        *
+//* Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                *
 //* Date:         01/2010                                                                      *
 //* Author:       (c) Gerald Gradl                                                             *
 //**********************************************************************************************
-/*
-Sternformationen:
 
-1. 1 2 5 7 10 18 19 23 28 29 (Steinbock)
-2. 3 7 8 13 20 22 26 30 (Zwilling)
-3. 4 6 9 16 17 20 27 31 32 (Jungfrau)
-4. 11 12 14 15 25 (Krebs)
-5. 21 23 24 (Widder)
-
-  00000000011111111112222222222333
-  12345678901234567890123456789012
-1.11001010010000000110001000011000
-2.00100011000010000001010001000100
-3.00010100100000011001000000100011
-4.00000000001101100000000010000000
-5.00000000000000000000101100000000
-*/
 //**********************************************************************************************
 //* Include Files                                                                              *
 //**********************************************************************************************
@@ -71,21 +55,30 @@ SIGNCONTENT   DW  0
 DIMMACT       DW  0
 DIMMTEMP      DW  0
 GSCLKCNT      DW  0
-STATUSBITS    DB  0       ; RESERVED-RESERVED-RESERVED-RESERVED-RESERVED-RESERVED-ONOFF-FIRSTCYCLE
+STATUSBITS    DB  0       ; RESERVED-RESERVED-RESERVED-RESERVED-RESERVED-INITIAL-ONOFF-FIRSTCYCLE
 REPEATER      DB  0
 
 ;-----------------------------------------------------------------------------------------------
 ; Constants
 ;-----------------------------------------------------------------------------------------------
             RSEG  CODE:CODE
+/*
+Sternformationen:
 
-////           33322222222221111111111000000000
-////           21098765432109876543210987654321
-//STEINBOCK DL 00011000010001100000001001010011b
-//ZWILLING  DL 00100010001010000001000011000100b
-//JUNGFRAU  DL 11000100000010011000000100101000b
-//KREBS     DL 00000001000000000110110000000000b
-//WIDDER    DL 00000000110100000000000000000000b
+1. 1 2 5 7 10 18 19 23 28 29 (Steinbock)
+2. 3 7 8 13 20 22 26 30 (Zwilling)
+3. 4 6 9 16 17 20 27 31 32 (Jungfrau)
+4. 11 12 14 15 25 (Krebs)
+5. 21 23 24 (Widder)
+
+//           33322222222221111111111000000000
+//           21098765432109876543210987654321
+STEINBOCK DL 00011000010001100000001001010011b
+ZWILLING  DL 00100010001010000001000011000100b
+JUNGFRAU  DL 11000100000010011000000100101000b
+KREBS     DL 00000001000000000110110000000000b
+WIDDER    DL 00000000110100000000000000000000b
+*/
 
 //TESTL      DW 0000000000000001b
 //TESTH      DW 0000000000000000b
@@ -110,20 +103,20 @@ ENDE
 //**********************************************************************************************
 //* Main Memory                                                                                *
 //**********************************************************************************************
-	    RSEG  CODE:CODE	                     ;ORG   BOF
+	    RSEG    CODE:CODE	                     ;ORG   BOF
 //main
 RESET                                      	     ; Set Program Start at begin of Flash
-            mov   #EOR,SP                            ; End of RAM  + 1
-            call  #Init_Sys
-            call  #REGClear
-            call  #RAMClear
+            mov     #EOR,SP                          ; End of RAM  + 1
+            call    #Init_Sys
+            call    #REGClear
+            call    #RAMClear
 
 RESTART     mov.b   #DotCorrection,&DCVALUE          
             call    #BUILDDCString
             call    #SENDDotCorretion
            // jmp     TESTLED
             mov.b   #TOTALREPEAT,&REPEATER
-            bis.b   #ONOFF,&STATUSBITS
+            bis.b   #ONOFF+INITIAL,&STATUSBITS
             mov     #STEINBOCKL,ACTSTAR
 
 //**********************************************************************************************
@@ -306,8 +299,11 @@ SENDGreyScale:
             bic.b   #VPRG,&P1OUT
             bis.b   #FIRSTCYCLE,&STATUSBITS
 VPRGNotSet  clr     &GSCLKCNT
+            bit.b   #INITIAL,&STATUSBITS
+            jc      INITIALLoop
             bic.b   #BLANK,&P1OUT            
-            
+
+INITIALLoop bic.b   #INITIAL,&STATUSBITS
             mov     #GSSTRING,RTEMP2
 NextGS      mov     #08d,&LENGTH
             mov.b   0(RTEMP2),R5
@@ -427,23 +423,23 @@ OFFITGOES   bic.b   #ONOFF,&STATUSBITS
 //**********************************************************************************************
 //* Interrupt Vectors used with MSP430x20xx                                                    *
 //**********************************************************************************************
-            RSEG  INTVEC                             ; Interrupt Vector Startadress
-            DW    RESET                              ; 16 - unused
-            DW    RESET                              ; 17 - unused
-            DW    P1ISR                              ; 18 - I/O Port P1
-            DW    RESET                              ; 19 - I/O Port P2
-            DW    RESET                              ; 20 - USI (F20x2 and F20x3 only)
-            DW    RESET                              ; 21 - ADC10 (F20x2 only) / SD16A (F20x3 only)
-            DW    RESET                              ; 22 - unused
-            DW    RESET                              ; 23 - unused
-            DW    RESET                              ; 24 - Timer A2 TACCR1, TAIFG
-            DW    RESET                              ; 25 - Timer A2 TACCR0
-            DW    RESET                              ; 26 - Watchdog Timer+, Timer mode
-            DW    RESET                              ; 27 - Comp. A+ (F20x1 only)
-            DW    RESET                              ; 28 - unused
-            DW    RESET                              ; 29 - unused
-            DW    RESET                              ; 30 - NMI, Osc. fault
-            DW    RESET                              ; 31 - POR, ext. Reset, Watchdog Timer+
+            RSEG    INTVEC                           ; Interrupt Vector Startadress
+            DW      RESET                            ; 16 - unused
+            DW      RESET                            ; 17 - unused
+            DW      P1ISR                            ; 18 - I/O Port P1
+            DW      RESET                            ; 19 - I/O Port P2
+            DW      RESET                            ; 20 - USI (F20x2 and F20x3 only)
+            DW      RESET                            ; 21 - ADC10 (F20x2 only) / SD16A (F20x3 only)
+            DW      RESET                            ; 22 - unused
+            DW      RESET                            ; 23 - unused
+            DW      RESET                            ; 24 - Timer A2 TACCR1, TAIFG
+            DW      RESET                            ; 25 - Timer A2 TACCR0
+            DW      RESET                            ; 26 - Watchdog Timer+, Timer mode
+            DW      RESET                            ; 27 - Comp. A+ (F20x1 only)
+            DW      RESET                            ; 28 - unused
+            DW      RESET                            ; 29 - unused
+            DW      RESET                            ; 30 - NMI, Osc. fault
+            DW      RESET                            ; 31 - POR, ext. Reset, Watchdog Timer+
 //**********************************************************************************************
 //* End of program                                                                             *
 //**********************************************************************************************
