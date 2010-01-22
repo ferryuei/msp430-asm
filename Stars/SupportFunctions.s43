@@ -1,9 +1,9 @@
 //**********************************************************************************************
 //* Filename:     SupportFunctions.s43                                                         *
-//* Description:                                                                               *
+//* Description:  Various Support Functions for MSP430                                         *
 //* Device:       MSP430F2012IN                                                                *
-//* Version:      0.0.1                                                                        *
-//* Compiler:     IAR Embedded Workbench IDE V.4.11A (5.12)                                    *
+//* Version:      1.0.0                                                                        *
+//* Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                *
 //* Date:         01/2009                                                                      *
 //* Author:       (c) Gerald Gradl                                                             *
 //**********************************************************************************************
@@ -37,7 +37,6 @@ StopWDT     mov   #WDTPW+WDTHOLD,&WDTCTL             ; Stop WDT
 SetupBT                                              ; Set DCO to 1 MHz:
             mov.b &CALBC1_8MHZ,&BCSCTL1              ; Set range
             mov.b &CALDCO_8MHZ,&DCOCTL               ; Set DCO step + modulation
-           // bis.b #DIVM_3,&BCSCTL2
 
 SetupPorts  bic.b #GSCLK+SCLK+XLAT,&P1OUT
             bis.b #VPRG+BLANK,&P1OUT
@@ -53,26 +52,7 @@ SetupPorts  bic.b #GSCLK+SCLK+XLAT,&P1OUT
             
             bis.b #SCLK+SIN,&P1DIR
             bic.b #SCLK+SIN,&P1OUT
-/*            
-SetupTimerA mov.w #TASSEL_2+TACLR,&TACTL
-            mov.w #OUTMOD_4,&TACCTL0
-          // mov.w #CCIE,&TACCTL1
-            mov.w #01h,&TACCR0
-          // mov.w #0FFFFh,&TACCR1
-            
-            bis.b #GSCLK,&P1SEL
-            
-
-SetupUSI    bis.b #USIPE7+USIPE6+USIPE5+USIMST+USIOE,&USICTL0
-            bis.b #USIDIV_3+USISSEL_2,&USICKCTL
-            bic.b #USISWRST,&USICTL0
-          //  mov.b #08h,&USICNT
-          
-WDTTimer    mov   #WDTPW+WDTHOLD+WDTTMSEL+WDTCNTCL+WDTIS_3,&WDTCTL
-            bis.b #WDTIE,&IE1
-          
-            eint
-*/          
+         
             ret
 
 ;-----------------------------------------------------------------------------------------------
