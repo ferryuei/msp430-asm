@@ -31,107 +31,107 @@
             RSEG CODE:CODE
 
 ;-----------------------------------------------------------------------------------------------
-Init_Sys                                             ; Initialize System Peripherals
+Init_Sys                                               ; Initialize System Peripherals
 ;-----------------------------------------------------------------------------------------------
-StopWDT     mov   #WDTPW+WDTHOLD,&WDTCTL             ; Stop WDT
-SetupBT                                              ; Set DCO to 1 MHz:
-            mov.b &CALBC1_8MHZ,&BCSCTL1              ; Set range
-            mov.b &CALDCO_8MHZ,&DCOCTL               ; Set DCO step + modulation
+StopWDT     mov     #WDTPW+WDTHOLD,&WDTCTL             ; Stop WDT
+SetupBT                                                ; Set DCO to 1 MHz:
+            mov.b   &CALBC1_8MHZ,&BCSCTL1              ; Set range
+            mov.b   &CALDCO_8MHZ,&DCOCTL               ; Set DCO step + modulation
 
-SetupPorts  bic.b #GSCLK+SCLK+XLAT,&P1OUT
-            bis.b #VPRG+BLANK,&P1OUT
-            bis.b #GSCLK+XLAT+VPRG+BLANK,&P1DIR
+SetupPorts  bic.b   #GSCLK+SCLK+XLAT,&P1OUT
+            bis.b   #VPRG+BLANK,&P1OUT
+            bis.b   #GSCLK+XLAT+VPRG+BLANK,&P1DIR
 
-            bic.b #LED,&P2SEL
-            bis.b #LED,&P2OUT
-            bis.b #LED,&P2DIR
+            bic.b   #LED,&P2SEL
+            bis.b   #LED,&P2OUT
+            bis.b   #LED,&P2DIR
             
-            bis.b #KEYS,&P1IES
-            bis.b #KEYS,&P1IE
-            bic.b #KEYS,&P1DIR
+            bis.b   #KEYS,&P1IES
+            bis.b   #KEYS,&P1IE
+            bic.b   #KEYS,&P1DIR
             
-            bis.b #SCLK+SIN,&P1DIR
-            bic.b #SCLK+SIN,&P1OUT
+            bis.b   #SCLK+SIN,&P1DIR
+            bic.b   #SCLK+SIN,&P1OUT
          
             ret
 
 ;-----------------------------------------------------------------------------------------------
-REGClear                                             ; Clear All Registers
+REGClear                                               ; Clear All Registers
 ;-----------------------------------------------------------------------------------------------
-            clr   R4
-            clr   R5
-            clr   R6
-            clr   R7
-            clr   R8
-            clr   R9
-            clr   R10
-            clr   R11
-            clr   R12
-            clr   R13
-            clr   R14
-            clr   R15
+            clr     R4
+            clr     R5
+            clr     R6
+            clr     R7
+            clr     R8
+            clr     R9
+            clr     R10
+            clr     R11
+            clr     R12
+            clr     R13
+            clr     R14
+            clr     R15
             ret
 
 ;-----------------------------------------------------------------------------------------------
-RAMClear                                             ; RAM clear routine
+RAMClear                                               ; RAM clear routine
 ;-----------------------------------------------------------------------------------------------
-            mov   #BOR,RTEMP1                        ; Start address of RAM
-            mov   SP,RTEMP2                          ; Use stack pointer position
-            decd  RTEMP2                             ; Safety distance to SP
-RAMClearLP  mov.b #0h,0(RTEMP1)                      ; Start clearing
-            inc   RTEMP1                             ; Increment counter
-            cmp   RTEMP2,RTEMP1                      ; End of RAM?
-            jne   RAMClearLP                         ; No? Keep going
-            clr   RTEMP1                             ; Clear temporary registers
-            clr   RTEMP2
+            mov     #BOR,RTEMP1                        ; Start address of RAM
+            mov     SP,RTEMP2                          ; Use stack pointer position
+            decd    RTEMP2                             ; Safety distance to SP
+RAMClearLP  mov.b   #0h,0(RTEMP1)                      ; Start clearing
+            inc     RTEMP1                             ; Increment counter
+            cmp     RTEMP2,RTEMP1                      ; End of RAM?
+            jne     RAMClearLP                         ; No? Keep going
+            clr     RTEMP1                             ; Clear temporary registers
+            clr     RTEMP2
+            ret	    
+;-----------------------------------------------------------------------------------------------
+WaitPulse                                              ; Wait routine for Pulses
+;-----------------------------------------------------------------------------------------------
+            mov     #02h,RTEMP1
+LoopPulse   dec     RTEMP1
+            jnz     LoopPulse
             ret
 ;-----------------------------------------------------------------------------------------------
-WaitPulse                                            ; Wait routine for Pulses
+WaitS                                                  ; Short wait routine
 ;-----------------------------------------------------------------------------------------------
-            mov   #02h,RTEMP1
-LoopPulse   dec   RTEMP1
-            jnz   LoopPulse
+            mov     #0FFh,RTEMP1
+LoopS       dec     RTEMP1
+            jnz     LoopS
             ret
 ;-----------------------------------------------------------------------------------------------
-WaitS                                                ; Short wait routine
+WaitM                                                  ; Medium wait routine
 ;-----------------------------------------------------------------------------------------------
-            mov   #0FFh,RTEMP1
-LoopS       dec   RTEMP1
-            jnz   LoopS
+            mov     #01FFh,RTEMP1
+LoopM       dec     RTEMP1
+            jnz     LoopM
             ret
 ;-----------------------------------------------------------------------------------------------
-WaitM                                                ; Long wait routine
+WaitM2                                                 ; Medium2 wait routine
 ;-----------------------------------------------------------------------------------------------
-            mov   #01FFh,RTEMP1
-LoopM       dec   RTEMP1
-            jnz   LoopM
-            ret
-;-----------------------------------------------------------------------------------------------
-WaitM2                                               ; Long wait routine
-;-----------------------------------------------------------------------------------------------
-            mov   #03FFFh,RTEMP1
-LoopM2      dec   RTEMP1
-            jnz   LoopM2
+            mov     #03FFFh,RTEMP1
+LoopM2      dec     RTEMP1
+            jnz     LoopM2
             ret            
 ;-----------------------------------------------------------------------------------------------
-WaitL                                                ; Long wait routine
+WaitL                                                  ; Long wait routine
 ;-----------------------------------------------------------------------------------------------
-            mov   #0FFFFh,RTEMP1
-LoopL       dec   RTEMP1
-            jnz   LoopL
+            mov     #0FFFFh,RTEMP1
+LoopL       dec     RTEMP1
+            jnz     LoopL
             ret
 ;-----------------------------------------------------------------------------------------------
-WaitSPI                                              ; SPI wait routine
+WaitSPI                                                ; SPI wait routine
 ;-----------------------------------------------------------------------------------------------
-            mov.b #02h,RTEMP1
-LoopSPI     dec   RTEMP1
-            jnz   LoopSPI
+            mov.b   #02h,RTEMP1
+LoopSPI     dec     RTEMP1
+            jnz     LoopSPI
             ret
 ;-----------------------------------------------------------------------------------------------
-WaitDebounce                                         ; Wait routine for button debounce
+WaitDebounce                                           ; Wait routine for button debounce
 ;-----------------------------------------------------------------------------------------------
-            mov   #0300h,RTEMP2
-LoopDB      dec   RTEMP2
-            jnz   LoopDB
+            mov     #0300h,RTEMP2
+LoopDB      dec     RTEMP2
+            jnz     LoopDB
             ret
 END
