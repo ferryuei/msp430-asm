@@ -1,12 +1,14 @@
-//**********************************************************************************************
-//* Filename:     Stars.s43                                                                    *
-//* Description:  Sternenhimmel für Laura                                                      *
-//* Device:       MSP430F2012IN                                                                *
-//* Version:      1.0.1 - Fix for initial blink added, INIT Bit added to Statusregister        *
-//* Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                *
-//* Date:         01/2010                                                                      *
-//* Author:       (c) Gerald Gradl                                                             *
-//**********************************************************************************************
+/*********************************************************************************************\
+* Filename:     Stars.s43                                                                     *
+* Description:  Sternenhimmel für Laura                                                       *
+* Device:       MSP430F2012IN                                                                 *
+* Version:      1.0.2 - Fix for initial blink added, On/Off by pressing button working        *
+*                     - Dimming working perfectly now, no steps visible after MCLK changed to *
+*                       16MHz and DIMM in and out loop added                                  *
+* Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                 *
+* Date:         01/2010                                                                       *
+* Author:       (c) Gerald Gradl                                                              *
+\*********************************************************************************************/
 
 //**********************************************************************************************
 //* Include Files                                                                              *
@@ -27,11 +29,12 @@
       EXTERN  WaitSPI
       EXTERN  WaitDebounce
       
-            ORG   CODE_REV
+
 //**********************************************************************************************
 //* Version Info                                                                               *
 //**********************************************************************************************
-Version     DW    00100h
+            ORG   CODE_REV
+Version     DW    00102h
 
 //**********************************************************************************************
 //* RAM                                                                                        *
@@ -55,8 +58,9 @@ SIGNCONTENT   DW  0
 DIMMACT       DW  0
 DIMMTEMP      DW  0
 GSCLKCNT      DW  0
-STATUSBITS    DB  0       ; RESERVED-RESERVED-RESERVED-RESERVED-RESERVED-INITIAL-ONOFF-FIRSTCYCLE
+STARREPEAT    DW  0
 REPEATER      DB  0
+STATUSBITS    DB  0       ; RESERVED-RESERVED-RESERVED-RESERVED-RESERVED-INITIAL-ONOFF-FIRSTCYCLE
 
 ;-----------------------------------------------------------------------------------------------
 ; Constants
@@ -353,30 +357,36 @@ NotFirstCycle
             ret
 ;-----------------------------------------------------------------------------------------------            
 DIMMIN      mov     #DIMMLOW,&DIMMACT
-LoopDIN     call    #BUILDGSString
+LoopDIN     add     #DIMMSTEP,&DIMMACT
+            call    #BUILDGSString
+            mov     #DIMMTIME,&STARREPEAT
+RepeatDIMMIN
             call    #SENDGreyScale
-
-            add     #DIMMSTEP,&DIMMACT
+            dec     &STARREPEAT
+            jnz     RepeatDIMMIN
             cmp     #DIMMHIGH,&DIMMACT
-            jl      LoopDIN
+            jlo     LoopDIN
             ret
 ;-----------------------------------------------------------------------------------------------
 DIMMOUT     mov     #DIMMHIGH,&DIMMACT
 LoopDOUT    call    #BUILDGSString
+            mov     #DIMMTIME,&STARREPEAT
+RepeatDIMOUT
             call    #SENDGreyScale
-
+            dec     &STARREPEAT
+            jnz     RepeatDIMOUT
             sub     #DIMMSTEP,&DIMMACT
             cmp     #DIMMLOW,&DIMMACT
             jge     LoopDOUT
+            
             ret
 ;-----------------------------------------------------------------------------------------------
 SHOWSTAR    mov     #DIMMHIGH,&DIMMACT
             call    #BUILDGSString
-            mov     #STARTIME,R4
+            mov     #STARTIME,&STARREPEAT
 RepeatSTAR  call    #SENDGreyScale
-            dec     R4
+            dec     &STARREPEAT
             jnz     RepeatSTAR
-
             ret
 ;-----------------------------------------------------------------------------------------------
 BACKGROUND  mov     #DIMMLOW,&DIMMACT
@@ -385,7 +395,6 @@ BACKGROUND  mov     #DIMMLOW,&DIMMACT
 RepeatBACK  call    #SENDGreyScale
             dec     R4
             jnz     RepeatBACK
-
             ret
 ;-----------------------------------------------------------------------------------------------
 XLATPulse:  call    #WaitPulse
@@ -411,12 +420,12 @@ P1ISR       call    #WaitDebounce
             bit.b   #ONOFF,&STATUSBITS
             jc      OFFITGOES
             
-ONITGOES    bic.b   #LPM3+GIE,0(SP)
+ONITGOES    bic.b   #LPM3,0(SP)
             mov     #RESTART,2(SP)
             reti
 
 OFFITGOES   bic.b   #ONOFF,&STATUSBITS
-            bic.b   #LPM3+GIE,0(SP)
+            bic.b   #LPM3,0(SP)
             mov     #SWITCHOFF,2(SP)
             reti
             

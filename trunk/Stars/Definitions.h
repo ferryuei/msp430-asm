@@ -1,17 +1,19 @@
-/**********************************************************************************************
-* Additional register and bit definitions for the Texas Instruments MSP430 Microcontroller.
-* This file supports assembler and C development within the IAR-Embedded-Workbench environment.
-* Enclose all #define statements with parentheses
-*
-* Gerald Gradl, Version 1.0
-**********************************************************************************************/
+/*********************************************************************************************\
+* Filename:     Definitions.h                                                                 *
+* Description:  Definition file for Star Project                                              *
+* Device:       MSP430F2012IN                                                                 *
+* Version:      1.0.2                                                                         *
+* Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                 *
+* Date:         01/2010                                                                       *
+* Author:       (c) Gerald Gradl                                                              *
+\*********************************************************************************************/
 
+/**********************************************************************************************
+* GLOBAL INCLUDE FILES
+**********************************************************************************************/
 #define F2012
 //#define F2132
 
-//**********************************************************************************************
-Global_Include_Files                            ; Include files
-//**********************************************************************************************
 #ifdef F2132
 #include        "msp430x21x2.h"
 #endif
@@ -22,24 +24,20 @@ Global_Include_Files                            ; Include files
 /**********************************************************************************************
 * GLOBAL DEFINITIONS
 **********************************************************************************************/
-#define     DotCorrection   00063d
-//#define     DotCorrection   0010d
-//#define     DIMMLOW         01EFh
+#define     DotCorrection   00063d                    // 0-63d
 #define     DIMMLOW         00050d
-//#define     DIMMHIGH        0FFFh
-#define     DIMMHIGH        02000d
-//#define     DIMMSTEP        00B4h                   // (0fffh-01efh)/20d = 180d
-#define     DIMMSTEP        00002d                    // /200d
-#define     STARTIME        00200d
-#define     BACKGROUNDTIME  00100d
-#define     TOTALREPEAT     00015d
+#define     DIMMHIGH        01250d                    // 0-4095d
+#define     DIMMSTEP        00002d                    // (DIMMHIGH-DIMMLOW)/DIMMSTEP = INTEGER
+#define     DIMMTIME        00004d
+#define     STARTIME        00400d
+#define     BACKGROUNDTIME  00400d
+#define     TOTALREPEAT     00010d
 
 //STATUSBITS
 #define     FIRSTCYCLE      01h
 #define     ONOFF           02h
-#define		INITIAL			04h
+#define     INITIAL         04h
 
-//#define     WDTIS_3         03h
 /**********************************************************************************************
 * PORT DEFINITIONS
 **********************************************************************************************/
@@ -69,12 +67,12 @@ Global_Include_Files                            ; Include files
 /**********************************************************************************************
 * Memory Definitions
 **********************************************************************************************/
-#define		BOR     00200h
-#define		EOR     00280h
-#define		BOI     01000h
-#define		EOI     010FFh
-#define		BOF     0F800h
-#define		EOF     0FF00h
+#define	    BOR     00200h
+#define	    EOR     00280h
+#define	    BOI     01000h
+#define	    EOI     010FFh
+#define	    BOF     0F800h
+#define	    EOF     0FF00h
 
 /**********************************************************************************************
 * END OF INCLUDEFILE
