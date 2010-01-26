@@ -1,13 +1,21 @@
-//**********************************************************************************************
-//* Filename:     SupportFunctions.s43                                                         *
-//* Description:  Various Support Functions for MSP430                                         *
-//* Device:       MSP430F2012IN                                                                *
-//* Version:      1.0.0                                                                        *
-//* Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                *
-//* Date:         01/2009                                                                      *
-//* Author:       (c) Gerald Gradl                                                             *
-//**********************************************************************************************
+/*********************************************************************************************\
+* Filename:     SupportFunctions.s43                                                          *
+* Description:  Various Support Functions for MSP430                                          *
+* Device:       MSP430F2012IN                                                                 *
+* Version:      1.0.2                                                                         *
+* Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                 *
+* Date:         01/2010                                                                       *
+* Author:       (c) Gerald Gradl                                                              *
+\*********************************************************************************************/
 
+//**********************************************************************************************
+//* Include Files                                                                              *
+//**********************************************************************************************
+#include "Definitions.h"
+
+//**********************************************************************************************
+//* Global Variables                                                                           *
+//**********************************************************************************************
       PUBLIC  Init_Sys
       PUBLIC  REGClear
       PUBLIC  RAMClear
@@ -20,12 +28,6 @@
       PUBLIC  WaitDebounce
       
 //**********************************************************************************************
-//* Include Files                                                                              *
-//**********************************************************************************************
-#include "msp430x20x2.h"
-#include "Definitions.h"
-
-//**********************************************************************************************
 //* Support Functions                                                                          *
 //**********************************************************************************************
             RSEG CODE:CODE
@@ -35,8 +37,8 @@ Init_Sys                                               ; Initialize System Perip
 ;-----------------------------------------------------------------------------------------------
 StopWDT     mov     #WDTPW+WDTHOLD,&WDTCTL             ; Stop WDT
 SetupBT                                                ; Set DCO to 1 MHz:
-            mov.b   &CALBC1_8MHZ,&BCSCTL1              ; Set range
-            mov.b   &CALDCO_8MHZ,&DCOCTL               ; Set DCO step + modulation
+            mov.b   &CALBC1_16MHZ,&BCSCTL1             ; Set range
+            mov.b   &CALDCO_16MHZ,&DCOCTL              ; Set DCO step + modulation
 
 SetupPorts  bic.b   #GSCLK+SCLK+XLAT,&P1OUT
             bis.b   #VPRG+BLANK,&P1OUT
@@ -52,6 +54,8 @@ SetupPorts  bic.b   #GSCLK+SCLK+XLAT,&P1OUT
             
             bis.b   #SCLK+SIN,&P1DIR
             bic.b   #SCLK+SIN,&P1OUT
+            
+            eint
          
             ret
 
