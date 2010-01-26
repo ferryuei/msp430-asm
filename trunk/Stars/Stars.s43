@@ -2,9 +2,7 @@
 * Filename:     Stars.s43                                                                     *
 * Description:  Sternenhimmel für Laura                                                       *
 * Device:       MSP430F2012IN                                                                 *
-* Version:      1.0.2 - Fix for initial blink added, On/Off by pressing button working        *
-*                     - Dimming working perfectly now, no steps visible after MCLK changed to *
-*                       16MHz and DIMM in and out loop added                                  *
+* Version:      1.0.3 - Bugfix - Turn off red LED when switched off                           *
 * Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                 *
 * Date:         01/2010                                                                       *
 * Author:       (c) Gerald Gradl                                                              *
@@ -34,7 +32,7 @@
 //* Version Info                                                                               *
 //**********************************************************************************************
             ORG   CODE_REV
-Version     DW    00102h
+Version     DW    00103h
 
 //**********************************************************************************************
 //* RAM                                                                                        *
@@ -93,12 +91,12 @@ ALLOFFH    DW 0000000000000000b
 
 STEINBOCKL DW 0000001001010011b
 STEINBOCKH DW 0001100001000110b
+KREBSL     DW 0110110000000000b
+KREBSH     DW 0000000100000000b
 ZWILLINGL  DW 0001000011000100b
 ZWILLINGH  DW 0010001000101000b
 JUNGFRAUL  DW 1000000100101000b
 JUNGFRAUH  DW 1100010000001001b
-KREBSL     DW 0110110000000000b
-KREBSH     DW 0000000100000000b
 WIDDERL    DW 0000000000000000b
 WIDDERH    DW 0000000011010000b
 ENDE
@@ -121,6 +119,7 @@ RESTART     mov.b   #DotCorrection,&DCVALUE
            // jmp     TESTLED
             mov.b   #TOTALREPEAT,&REPEATER
             bis.b   #ONOFF+INITIAL,&STATUSBITS
+            bis.b   #LED,&P2OUT
             mov     #STEINBOCKL,ACTSTAR
 
 //**********************************************************************************************
@@ -150,6 +149,7 @@ LoopOFFDIM  call    #BUILDGSString
             sub     #DIMMSTEP,&DIMMACT
             jnz     LoopOFFDIM
             eint
+            bic.b   #LED,&P2OUT
             bis.b   #LPM3,SR
             jmp     $
             

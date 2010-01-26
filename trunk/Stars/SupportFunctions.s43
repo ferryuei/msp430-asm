@@ -45,7 +45,7 @@ SetupPorts  bic.b   #GSCLK+SCLK+XLAT,&P1OUT
             bis.b   #GSCLK+XLAT+VPRG+BLANK,&P1DIR
 
             bic.b   #LED,&P2SEL
-            bis.b   #LED,&P2OUT
+          //  bis.b   #LED,&P2OUT
             bis.b   #LED,&P2DIR
             
             bis.b   #KEYS,&P1IES
@@ -134,7 +134,7 @@ LoopSPI     dec     RTEMP1
 ;-----------------------------------------------------------------------------------------------
 WaitDebounce                                           ; Wait routine for button debounce
 ;-----------------------------------------------------------------------------------------------
-            mov     #0300h,RTEMP2
+            mov     #0600h,RTEMP2
 LoopDB      dec     RTEMP2
             jnz     LoopDB
             ret
