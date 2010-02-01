@@ -33,10 +33,16 @@
 #define     BACKGROUNDTIME  00400d
 #define     TOTALREPEAT     00010d
 
+#define     ADCNOKEY        00070h
+#define     ADCKEY1         00055h
+#define     ADCKEY2         00035h
+#define     ADCKEY3         00010h
+
 //STATUSBITS
 #define     FIRSTCYCLE      01h
 #define     ONOFF           02h
 #define     INITIAL         04h
+#define     ALLONOFF        08h
 
 /**********************************************************************************************
 * PORT DEFINITIONS
@@ -55,6 +61,7 @@
 
 //PORT 2.X
 #define     LED     040h
+#define     HELL    080h
 
 /**********************************************************************************************
 * REGISTER DEFINITIONS

@@ -2,7 +2,7 @@
 * Filename:     Stars.s43                                                                     *
 * Description:  Sternenhimmel für Laura                                                       *
 * Device:       MSP430F2012IN                                                                 *
-* Version:      1.0.3 - Bugfix - Turn off red LED when switched off                           *
+* Version:      1.0.5 - Feature - Key function extended to differentiate between keys         *
 * Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                 *
 * Date:         01/2010                                                                       *
 * Author:       (c) Gerald Gradl                                                              *
@@ -32,7 +32,7 @@
 //* Version Info                                                                               *
 //**********************************************************************************************
             ORG   CODE_REV
-Version     DW    00103h
+Version     DW    00105h
 
 //**********************************************************************************************
 //* RAM                                                                                        *
@@ -58,7 +58,7 @@ DIMMTEMP      DW  0
 GSCLKCNT      DW  0
 STARREPEAT    DW  0
 REPEATER      DB  0
-STATUSBITS    DB  0       ; RESERVED-RESERVED-RESERVED-RESERVED-RESERVED-INITIAL-ONOFF-FIRSTCYCLE
+STATUSBITS    DB  0       ; RESERVED-RESERVED-RESERVED-RESERVED-ALLONOFF-INITIAL-ONOFF-FIRSTCYCLE
 
 ;-----------------------------------------------------------------------------------------------
 ; Constants
@@ -81,24 +81,16 @@ JUNGFRAU  DL 11000100000010011000000100101000b
 KREBS     DL 00000001000000000110110000000000b
 WIDDER    DL 00000000110100000000000000000000b
 */
+//          Lowword 16-01, Highword 32-17
+//TEST      DW 0000000000000001b, 0000000000000000b
+ALLON      DW 1111111111111111b, 1111111111111111b
+ALLOFF     DW 0000000000000000b, 0000000000000000b
 
-//TESTL      DW 0000000000000001b
-//TESTH      DW 0000000000000000b
-//ALLONL     DW 1111111111111111b
-//ALLONH     DW 1111111111111111b
-ALLOFFL    DW 0000000000000000b
-ALLOFFH    DW 0000000000000000b
-
-STEINBOCKL DW 0000001001010011b
-STEINBOCKH DW 0001100001000110b
-KREBSL     DW 0110110000000000b
-KREBSH     DW 0000000100000000b
-ZWILLINGL  DW 0001000011000100b
-ZWILLINGH  DW 0010001000101000b
-JUNGFRAUL  DW 1000000100101000b
-JUNGFRAUH  DW 1100010000001001b
-WIDDERL    DW 0000000000000000b
-WIDDERH    DW 0000000011010000b
+STEINBOCK  DW 0000001001010011b, 0001100001000110b
+KREBS      DW 0110110000000000b, 0000000100000000b
+ZWILLING   DW 0001000011000100b, 0010001000101000b
+JUNGFRAU   DW 1000000100101000b, 1100010000001001b
+WIDDER     DW 0000000000000000b, 0000000011010000b
 ENDE
 
 
@@ -119,8 +111,10 @@ RESTART     mov.b   #DotCorrection,&DCVALUE
            // jmp     TESTLED
             mov.b   #TOTALREPEAT,&REPEATER
             bis.b   #ONOFF+INITIAL,&STATUSBITS
+            bic.b   #ALLONOFF,&STATUSBITS
             bis.b   #LED,&P2OUT
-            mov     #STEINBOCKL,ACTSTAR
+            bic.b   #HELL,&P2DIR
+            mov     #STEINBOCK,ACTSTAR
 
 //**********************************************************************************************
 //* Main Loop                                                                                  *
@@ -137,12 +131,12 @@ Main                                                 ; Main Program
             incd    ACTSTAR
             cmp     #ENDE,ACTSTAR
             jne     Main
-            mov     #STEINBOCKL,ACTSTAR
+            mov     #STEINBOCK,ACTSTAR
             dec.b   &REPEATER
             jz      SWITCHOFF
             jmp     Main
 
-SWITCHOFF   mov     #ALLOFFL,ACTSTAR 
+SWITCHOFF   mov     #ALLOFF,ACTSTAR 
             mov     #DIMMLOW,&DIMMACT
 LoopOFFDIM  call    #BUILDGSString
             call    #SENDGreyScale
@@ -154,7 +148,7 @@ LoopOFFDIM  call    #BUILDGSString
             jmp     $
             
 /*
-TESTLED     mov     #TESTL,ACTSTAR
+TESTLED     mov     #TEST,ACTSTAR
             call    #BACKGROUND
             call    #DIMMIN
             call    #SHOWSTAR
@@ -409,26 +403,78 @@ SCLKPulse:  call    #WaitPulse
             bic.b   #SCLK,&P1OUT
             ret
 ;-----------------------------------------------------------------------------------------------
-
-
+WHICHKEY:   mov.b   #08h,&ADC10AE0
+            bis     #ENC+ADC10SC,&ADC10CTL0
+ADCLOOP     bit     #ADC10BUSY,&ADC10CTL1
+            jnz     ADCLOOP
+            bic     #ENC+ADC10SC,&ADC10CTL0
+            clr.b   &ADC10AE0
+            ret
+;-----------------------------------------------------------------------------------------------
+SwitchALLON:
+//            bis.b   #HELL,&P2DIR
+            bis.b   #LED,&P2OUT
+            mov     #ALLON,ACTSTAR
+            mov     #04095d,&DIMMACT
+            call    #BUILDGSString
+RepeatON    call    #SENDGreyScale
+            jmp     RepeatON
+            jmp     $
+;-----------------------------------------------------------------------------------------------
+SwitchALLBACKGROUND:
+//            bic.b   #HELL,&P2DIR
+            bis.b   #LED,&P2OUT
+            mov     #ALLON,ACTSTAR
+            mov     #DIMMLOW,&DIMMACT
+            call    #BUILDGSString
+RepeatAllB  call    #SENDGreyScale
+            jmp     RepeatAllB
+            jmp     $
+;-----------------------------------------------------------------------------------------------
 
 //**********************************************************************************************
 //* Interrupt Routines                                                                         *
 //**********************************************************************************************
-P1ISR       call    #WaitDebounce
+P1ISR:      call    #WaitDebounce
+            call    #WHICHKEY
             bic.b   #KEYS,&P1IFG
-            bit.b   #ONOFF,&STATUSBITS
+            
+            cmp     #ADCNOKEY,&ADC10MEM
+            jhs     EXITP1ISR
+            cmp     #ADCKEY1,&ADC10MEM
+            jhs     KEY1
+            cmp     #ADCKEY2,&ADC10MEM
+            jhs     KEY2
+            cmp     #ADCKEY3,&ADC10MEM
+            jhs     KEY3
+EXITP1ISR:  reti
+
+KEY1:       bit.b   #ONOFF,&STATUSBITS
             jc      OFFITGOES
             
-ONITGOES    bic.b   #LPM3,0(SP)
+ONITGOES:   bic.b   #LPM3,0(SP)
             mov     #RESTART,2(SP)
             reti
 
-OFFITGOES   bic.b   #ONOFF,&STATUSBITS
+OFFITGOES:  bic.b   #ONOFF,&STATUSBITS
             bic.b   #LPM3,0(SP)
             mov     #SWITCHOFF,2(SP)
             reti
+
+KEY2:       xor.b   #ALLONOFF,&STATUSBITS
+            bit.b   #ALLONOFF,&STATUSBITS
+            jc      ONGOALL
+            bic.b   #LPM3,0(SP)
+            mov     #SwitchALLBACKGROUND,2(SP)
+            reti
             
+ONGOALL     bic.b   #LPM3,0(SP)
+            mov     #SwitchALLON,2(SP)
+            reti
+
+KEY3:     //  xor.b   #HELL,&P2DIR
+            reti
+
 //**********************************************************************************************
 //* Interrupt Vectors used with MSP430x20xx                                                    *
 //**********************************************************************************************
