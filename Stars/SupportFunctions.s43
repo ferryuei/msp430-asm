@@ -2,7 +2,7 @@
 * Filename:     SupportFunctions.s43                                                          *
 * Description:  Various Support Functions for MSP430                                          *
 * Device:       MSP430F2012IN                                                                 *
-* Version:      1.0.2                                                                         *
+* Version:      1.0.5                                                                         *
 * Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                 *
 * Date:         01/2010                                                                       *
 * Author:       (c) Gerald Gradl                                                              *
@@ -44,9 +44,11 @@ SetupPorts  bic.b   #GSCLK+SCLK+XLAT,&P1OUT
             bis.b   #VPRG+BLANK,&P1OUT
             bis.b   #GSCLK+XLAT+VPRG+BLANK,&P1DIR
 
-            bic.b   #LED,&P2SEL
+            bic.b   #LED+HELL,&P2SEL
           //  bis.b   #LED,&P2OUT
             bis.b   #LED,&P2DIR
+            bic.b   #HELL,&P2DIR
+            bic.b   #HELL,&P2OUT
             
             bis.b   #KEYS,&P1IES
             bis.b   #KEYS,&P1IE
@@ -55,6 +57,9 @@ SetupPorts  bic.b   #GSCLK+SCLK+XLAT,&P1OUT
             bis.b   #SCLK+SIN,&P1DIR
             bic.b   #SCLK+SIN,&P1OUT
             
+ADC10       mov     #SREF_1+ADC10SHT_1+REFON+ADC10ON,&ADC10CTL0
+            mov     #INCH_3+ADC10SSEL_2+ADC10DIV_3,&ADC10CTL1
+                                    
             eint
          
             ret
@@ -134,7 +139,7 @@ LoopSPI     dec     RTEMP1
 ;-----------------------------------------------------------------------------------------------
 WaitDebounce                                           ; Wait routine for button debounce
 ;-----------------------------------------------------------------------------------------------
-            mov     #0600h,RTEMP2
+            mov     #00600h,RTEMP2
 LoopDB      dec     RTEMP2
             jnz     LoopDB
             ret
