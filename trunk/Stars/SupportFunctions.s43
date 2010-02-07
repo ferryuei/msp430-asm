@@ -139,7 +139,7 @@ LoopSPI     dec     RTEMP1
 ;-----------------------------------------------------------------------------------------------
 WaitDebounce                                           ; Wait routine for button debounce
 ;-----------------------------------------------------------------------------------------------
-            mov     #00600h,RTEMP2
+            mov     #01500h,RTEMP2
 LoopDB      dec     RTEMP2
             jnz     LoopDB
             ret
