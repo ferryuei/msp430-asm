@@ -2,7 +2,8 @@
 * Filename:     Stars.s43                                                                     *
 * Description:  Sternenhimmel für Laura                                                       *
 * Device:       MSP430F2012IN                                                                 *
-* Version:      1.0.5 - Feature - Key function extended to differentiate between keys         *
+* Version:      1.0.6 - Bugfix - Some word access to byte locations fixed, debounce = ~1ms    *
+*               Possible Stack Overflow prevented                                             *
 * Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                 *
 * Date:         01/2010                                                                       *
 * Author:       (c) Gerald Gradl                                                              *
@@ -32,7 +33,7 @@
 //* Version Info                                                                               *
 //**********************************************************************************************
             ORG   CODE_REV
-Version     DW    00105h
+Version     DW    00106h
 
 //**********************************************************************************************
 //* RAM                                                                                        *
@@ -143,6 +144,7 @@ LoopOFFDIM  call    #BUILDGSString
             sub     #DIMMSTEP,&DIMMACT
             jnz     LoopOFFDIM
             eint
+            mov     #EOR,SP                             ; Stack Pointer Housekeeping
             bic.b   #LED,&P2OUT
             bis.b   #LPM3,SR
             jmp     $
@@ -262,7 +264,7 @@ SENDDotCorretion:
             bis.b   #VPRG+BLANK,&P1OUT
             
             mov     #DCSTRING,RTEMP2
-NextDC      mov     #08d,&LENGTH
+NextDC      mov.b   #08d,&LENGTH
             mov.b   0(RTEMP2),R5
             swpb    R5
 ShiftDCData
@@ -282,7 +284,7 @@ ClockDC     bis.b   #SCLK,&P1OUT
             nop
             nop
             bic.b   #SCLK,&P1OUT
-            dec     &LENGTH
+            dec.b   &LENGTH
             jnz     ShiftDCData
             inc     RTEMP2
             cmp     #DCSTRING+24,RTEMP2
@@ -303,7 +305,7 @@ VPRGNotSet  clr     &GSCLKCNT
 
 INITIALLoop bic.b   #INITIAL,&STATUSBITS
             mov     #GSSTRING,RTEMP2
-NextGS      mov     #08d,&LENGTH
+NextGS      mov.b   #08d,&LENGTH
             mov.b   0(RTEMP2),R5
             swpb    R5
 ShiftGSData
@@ -324,7 +326,7 @@ ClockGS     bis.b   #SCLK+GSCLK,&P1OUT
             nop
             bic.b   #SCLK+GSCLK,&P1OUT
             inc     &GSCLKCNT
-            dec     &LENGTH
+            dec.b   &LENGTH
             jnz     ShiftGSData
             inc     RTEMP2
             cmp     #GSSTRING+48,RTEMP2
