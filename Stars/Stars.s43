@@ -2,8 +2,7 @@
 * Filename:     Stars.s43                                                                     *
 * Description:  Sternenhimmel für Laura                                                       *
 * Device:       MSP430F2012IN                                                                 *
-* Version:      1.0.6 - Bugfix - Some word access to byte locations fixed, debounce = ~1ms    *
-*               Possible Stack Overflow prevented                                             *
+* Version:      1.0.7 - Bugfix - ONOFF was not cleared after timer switched off	the stars     *
 * Compiler:     IAR Embedded Workbench IDE V.4.21 (TI: V5.21)                                 *
 * Date:         01/2010                                                                       *
 * Author:       (c) Gerald Gradl                                                              *
@@ -33,7 +32,7 @@
 //* Version Info                                                                               *
 //**********************************************************************************************
             ORG   CODE_REV
-Version     DW    00106h
+Version     DW    00107h
 
 //**********************************************************************************************
 //* RAM                                                                                        *
@@ -146,6 +145,7 @@ LoopOFFDIM  call    #BUILDGSString
             eint
             mov     #EOR,SP                             ; Stack Pointer Housekeeping
             bic.b   #LED,&P2OUT
+            bic.b   #ONOFF,&STATUSBITS
             bis.b   #LPM3,SR
             jmp     $
             
