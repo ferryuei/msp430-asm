@@ -9,4 +9,4 @@
   }}}
 - Extension to 64 LEDs selectabel by switch (64, 48, 32, 16)
 
-- One button changes entire DC values +5/-5
+- One button changes entire DC values +5/-5 // DONE - V1.0.8
